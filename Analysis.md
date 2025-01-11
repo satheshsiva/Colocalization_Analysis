@@ -66,6 +66,7 @@ MFA: SNP effect allele frequency
 MetaBeta: Meta beta coefficient
 MetaSE: Meta standard error
 MetaPN: Meta sample size
+
 The data were stored in tab-delimited files for each gene and lead variant. An example of the Perl command used to extract data:
 
 ```
@@ -74,3 +75,31 @@ perl ProcessGWAS_EQTL_V3.pl rs1859788 GCST90012877_buildGRCh38.tsv PILRA 2021-07
 
 
 # Colocalization Analysis
+Colocalization analysis was conducted using the Coloc R package (version 5.2.3) in R (version 4.4.2). The analysis was executed with the following parameters for the SNP priors:
+
+p1 = 1e-04
+p2 = 1e-04
+p12 = 1e-05
+
+```
+gwas <- read.table("rs1385742_gwas.txt", header=TRUE)
+eqtl <- read.table("CD2AP_eqtl.txt", header=TRUE)
+rownames(gwas) <- gwas$SNP; rownames(eqtl) <- eqtl$SNP
+
+my.res <- coloc.abf(
+  dataset1 = list(snp = gwas$SNP, pvalues = gwas$Pvalue, beta = gwas$Beta, varbeta = gwas$Varbeta, MFA = gwas$MFA, position = gwas$Location, N = gwas$Size, type = "cc"),
+  dataset2 = list(snp = eqtl$SNP, pvalues = eqtl$Pvalue, beta = eqtl$Beta, varbeta = eqtl$Varbeta, MFA = eqtl$MFA, position = eqtl$Location, N = eqtl$Size, type = "cc")
+)
+
+# Sorting the results by posterior probability of H4 (colocalization)
+o <- order(my.res$results$SNP.PP.H4, decreasing=TRUE)
+cs <- cumsum(my.res$results$SNP.PP.H4[o])
+w <- which(cs > 0.95)[1]
+my.res$results[o,][1:w,]$snp
+
+results <- my.res$results
+write.table(results, file = "rs1385742_CD2AP_SCVA_01062025.txt", sep = "\t", quote = FALSE)
+```
+
+
+
